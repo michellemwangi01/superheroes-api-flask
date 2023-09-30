@@ -18,6 +18,7 @@ with app.app_context():
 
     for data in powers_data:
         power = Power(**data)
+        # print(power.description)
         db.session.add(power)
 
     db.session.commit()
@@ -39,6 +40,7 @@ with app.app_context():
 
     for data in heroes_data:
         hero = Hero(**data)
+        print(hero.super_name)
         db.session.add(hero)
 
     db.session.commit()

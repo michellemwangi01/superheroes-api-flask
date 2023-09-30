@@ -26,7 +26,7 @@ db.init_app(app)
 api = Api(app)
 heroes = Namespace("heroes")
 home = Namespace("home")
-powers = Namespace("Powers")
+powers = Namespace("powers")
 hero_powers = Namespace("Hero Powers")
 api.add_namespace(home)
 api.add_namespace(powers)
@@ -52,11 +52,19 @@ hero_model = api.model('hero', {
     "super_name": fields.String,
     "powers": fields.List(fields.Nested(powers_model))
 })
-power_model = api.inherit('power', powers_model, {
+power_model = api.model('power', {
     "id": fields.Integer,
     "name": fields.String,
     "description": fields.String,
     "heroes": fields.List(fields.Nested(heroes_model))
+})
+power_input_model = api.model('power_input', {
+    "name": fields.String,
+    "description": fields.String
+})
+hero_input_model = api.model('hero_input', {
+    "name": fields.String,
+    "super_name": fields.String
 })
 
 
@@ -77,9 +85,21 @@ class Heroes(Resource):
     def get(self):
         return Hero.query.all()
 
+    @heroes.expect(hero_input_model)
+    @heroes.marshal_with(hero_model)
+    def post(self):
+        print(heroes.payload)
+        new_hero = Hero(
+            name=heroes.payload['name'],
+            super_name=heroes.payload['super_name']
+        )
+        db.session.add(new_hero)
+        db.session.commit()
+        return new_hero, 201
+
 
 @heroes.route('/heroes/<int:id>')
-class Heroesbyid(Resource):
+class HeroesByID(Resource):
     @heroes.marshal_list_with(hero_model)
     def get(self, id):
         hero = Hero.query.filter_by(id=id).first()
@@ -91,6 +111,32 @@ class Heroesbyid(Resource):
             }, 404
         return response
 
+    @heroes.expect(hero_input_model)
+    @heroes.marshal_with(heroes_model)
+    def patch(self, id):
+        hero = Hero.query.filter_by(id=id).first()
+        for attr in heroes.payload:
+            setattr(hero, attr, heroes.payload[attr])
+        db.session.add(hero)
+        db.session.commit()
+        return hero, 201
+
+    def delete(self, id):
+        hero = Hero.query.filter_by(id=id).first()
+        if hero:
+            db.session.delete(hero)
+            db.session.commit()
+            response_body = {
+                "delete_successful": True,
+                "message": "Deleted Successfully"
+            }
+            return response_body, 200
+        else:
+            response_body = {
+                "error": "Hero not found"
+            }
+            return response_body, 404
+
 
 @powers.route('/powers')
 class Powers(Resource):
@@ -98,15 +144,54 @@ class Powers(Resource):
     def get(self):
         return Power.query.all()
 
+    @powers.expect(power_input_model)
+    @powers.marshal_with(power_model)
+    def post(self):
+        print(powers.payload)
+        new_power = Power(
+            name=powers.payload['name'],
+            description=powers.payload['description']
+        )
+        db.session.add(new_power)
+        db.session.commit()
+        return new_power, 201
+
 
 @powers.route('/power/<int:id>')
-class Powersbyid(Resource):
+class PowersByID(Resource):
     @powers.marshal_with(power_model)
     def get(self, id):
-        return Power.query.filter_by(id=id).first(), 200
+        power = Power.query.filter_by(id=id).first()
+        if power:
+            return power, 200
+        else:
+            return {"error": "Power not found"}, 404
 
-    # @hpowers.expects()
-    # def patch(self):
+    @powers.expect(power_input_model)
+    @powers.marshal_with(powers_model)
+    def patch(self, id):
+        power = Power.query.filter_by(id=id).first()
+        for attr in powers.payload:
+            setattr(power, attr, powers.payload[attr])
+        db.session.add(power)
+        db.session.commit()
+        return power, 201
+
+    def delete(self, id):
+        power = Power.query.filter_by(id=id).first()
+        if power:
+            db.session.delete(power)
+            db.session.commit()
+            response_body = {
+                "delete_successful": True,
+                "message": "Deleted Successfully"
+            }
+            return response_body, 200
+        else:
+            response_body = {
+                "error": "Restaurant not found"
+            }
+            return response_body, 404
 
 
 if __name__ == '__main__':
