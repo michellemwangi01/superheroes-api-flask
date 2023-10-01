@@ -39,12 +39,14 @@ class Power(db.Model):
     heroes = association_proxy('heropowers', 'hero')
 
     def __repr__(self):
-        return f'(id={self.id}, name={self.name} super_name={self.description})'
+        return f'(id={self.id}, name={self.name} description={self.description})'
 
     @validates('description')
     def checks_description(self, key, description):
         if len(description) < 20:
             raise ValueError("Description must be longer than 20 chars")
+        else:
+            return description
 
 class HeroPower(db.Model):
     __tablename__ = 'hero_powers'
@@ -60,9 +62,11 @@ class HeroPower(db.Model):
     power = db.relationship('Power', back_populates='heropowers')
 
     def __repr__(self):
-        return f'(id={self.id}, name={self.name} super_name={self.strength})'
+        return f'(id={self.id}, heroID={self.hero_id} strength={self.strength}) powerID={self.power_id}'
 
     @validates('strength')
     def checks_strength(self, key, strength):
         if strength not in ['Strong', 'Weak', 'Average']:
-            raise ValueError("Strength must be a value between 'Strong', 'Weak', 'Average'")
+            raise ValueError("Strength must be a value either 'Strong', 'Weak' or 'Average'")
+        else:
+            return strength

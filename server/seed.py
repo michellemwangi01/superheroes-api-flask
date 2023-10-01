@@ -18,7 +18,6 @@ with app.app_context():
 
     for data in powers_data:
         power = Power(**data)
-        # print(power.description)
         db.session.add(power)
 
     db.session.commit()
@@ -40,7 +39,6 @@ with app.app_context():
 
     for data in heroes_data:
         hero = Hero(**data)
-        print(hero.super_name)
         db.session.add(hero)
 
     db.session.commit()
@@ -59,6 +57,7 @@ with app.app_context():
 
             hero_power = HeroPower(hero_id=hero.id, power_id=power.id, strength=strength)
             db.session.add(hero_power)
+            print(hero_power)
 
     db.session.commit()
 

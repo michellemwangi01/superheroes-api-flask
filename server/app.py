@@ -27,7 +27,7 @@ api = Api(app)
 heroes = Namespace("heroes")
 home = Namespace("home")
 powers = Namespace("powers")
-hero_powers = Namespace("Hero Powers")
+hero_powers = Namespace("hero powers")
 api.add_namespace(home)
 api.add_namespace(powers)
 api.add_namespace(hero_powers)
@@ -65,6 +65,11 @@ power_input_model = api.model('power_input', {
 hero_input_model = api.model('hero_input', {
     "name": fields.String,
     "super_name": fields.String
+})
+hero_powers_model = api.model('hero_powers_model',{
+    "hero_id": fields.Integer,
+    "power_id":fields.Integer,
+    "strength":fields.String
 })
 
 
@@ -192,6 +197,64 @@ class PowersByID(Resource):
                 "error": "Restaurant not found"
             }
             return response_body, 404
+
+
+
+@hero_powers.route('/hero_powers')
+class HeroPowers(Resource):
+    @hero_powers.marshal_list_with(hero_powers_model)
+    def get(self):
+        return HeroPower.query.all(), 200
+
+    @hero_powers.expect(hero_powers_model)
+    @hero_powers.marshal_with(hero_powers_model)
+    def post(self):
+        new_hero_power = HeroPower(
+            hero_id=hero_powers.payload['hero_id'],
+            power_id=hero_powers.payload['power_id'],
+            strength=hero_powers.payload['strength']
+        )
+        db.session.add(new_hero_power)
+        db.session.commit()
+        return new_hero_power, 201
+
+
+@hero_powers.route('/hero_powers/<int:id>')
+class HeroPowersByID(Resource):
+    @hero_powers.marshal_with(hero_powers_model)
+    def get(self, id):
+        hero_power = HeroPower.query.filter_by(id=id).first()
+        if hero_power:
+            return hero_power, 200
+        else:
+            return {"error": "hero power not found"}, 404
+
+    @hero_powers.expect(hero_powers_model)
+    @hero_powers.marshal_with(hero_powers_model)
+    def patch(self, id):
+        hero_power = HeroPower.query.filter_by(id=id).first()
+        for attr in hero_powers.payload:
+            setattr(hero_power, attr, hero_powers.payload[attr])
+        db.session.add(hero_power)
+        db.session.commit()
+        return hero_power, 201
+
+    def delete(self, id):
+        hero_power = HeroPower.query.filter_by(id=id).first()
+        if hero_power:
+            db.session.delete(hero_power)
+            db.session.commit()
+            response_body = {
+                "delete_successful": True,
+                "message": "Deleted Successfully"
+            }
+            return response_body, 200
+        else:
+            response_body = {
+                "error": "Restaurant not found"
+            }
+            return response_body, 404
+
 
 
 if __name__ == '__main__':
