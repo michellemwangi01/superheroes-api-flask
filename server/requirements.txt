@@ -9,7 +9,7 @@ distlib==0.3.7
 dnspython==2.3.0
 email-validator==2.0.0.post2
 filelock==3.12.2
-Flask==2.3.3
+Flask==2.2.5
 Flask-Migrate==4.0.5
 Flask-SQLAlchemy==3.1.1
 Flask-WTF==1.1.1
