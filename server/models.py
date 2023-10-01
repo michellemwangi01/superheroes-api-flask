@@ -48,6 +48,7 @@ class Power(db.Model):
         else:
             return description
 
+
 class HeroPower(db.Model):
     __tablename__ = 'hero_powers'
 

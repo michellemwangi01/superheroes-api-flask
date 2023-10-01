@@ -8,6 +8,8 @@ from flask_sqlalchemy import SQLAlchemy
 from flask import make_response, request, jsonify
 from flask_restx import Resource, Api, Namespace, fields
 from models import db, HeroPower, Hero, Power
+from sqlalchemy.exc import SQLAlchemyError
+
 
 app = Flask(__name__)
 secret_key = secrets.token_hex(16)
@@ -66,10 +68,16 @@ hero_input_model = api.model('hero_input', {
     "name": fields.String,
     "super_name": fields.String
 })
-hero_powers_model = api.model('hero_powers_model',{
+hero_powers_model = api.model('hero_powers_model', {
+    "id": fields.Integer,
     "hero_id": fields.Integer,
-    "power_id":fields.Integer,
-    "strength":fields.String
+    "power_id": fields.Integer,
+    "strength": fields.String
+})
+hero_powers_input_model = api.model('hero_powers_input_model', {
+    "hero_id": fields.Integer,
+    "power_id": fields.Integer,
+    "strength": fields.String
 })
 
 
@@ -176,11 +184,24 @@ class PowersByID(Resource):
     @powers.marshal_with(powers_model)
     def patch(self, id):
         power = Power.query.filter_by(id=id).first()
-        for attr in powers.payload:
-            setattr(power, attr, powers.payload[attr])
-        db.session.add(power)
-        db.session.commit()
-        return power, 201
+        if power:
+            for attr in powers.payload:
+                setattr(power, attr, powers.payload[attr])
+            try:
+                db.session.add(power)
+                db.session.commit()
+                return power, 201
+            except SQLAlchemyError as e:
+                db.session.rollback()
+                response = {
+                    "errors": f'{e}'
+                }
+                return response, 404
+        else:
+            response = {
+                "error": "Power not found"
+            }
+            return response, 404
 
     def delete(self, id):
         power = Power.query.filter_by(id=id).first()
@@ -199,7 +220,6 @@ class PowersByID(Resource):
             return response_body, 404
 
 
-
 @hero_powers.route('/hero_powers')
 class HeroPowers(Resource):
     @hero_powers.marshal_list_with(hero_powers_model)
@@ -207,16 +227,23 @@ class HeroPowers(Resource):
         return HeroPower.query.all(), 200
 
     @hero_powers.expect(hero_powers_model)
-    @hero_powers.marshal_with(hero_powers_model)
+    @hero_powers.marshal_with(hero_model)
     def post(self):
-        new_hero_power = HeroPower(
-            hero_id=hero_powers.payload['hero_id'],
-            power_id=hero_powers.payload['power_id'],
-            strength=hero_powers.payload['strength']
-        )
-        db.session.add(new_hero_power)
-        db.session.commit()
-        return new_hero_power, 201
+        try:
+            new_hero_power = HeroPower(
+                hero_id=hero_powers.payload['hero_id'],
+                power_id=hero_powers.payload['power_id'],
+                strength=hero_powers.payload['strength']
+            )
+            db.session.add(new_hero_power)
+            db.session.commit()
+            hero = Hero.query.filter_by(id=new_hero_power.hero_id).first()
+            return hero, 201
+        except Exception as e:
+            response = {
+                "errors": f'{e}'
+            }
+            return response, 404
 
 
 @hero_powers.route('/hero_powers/<int:id>')
@@ -229,15 +256,22 @@ class HeroPowersByID(Resource):
         else:
             return {"error": "hero power not found"}, 404
 
-    @hero_powers.expect(hero_powers_model)
-    @hero_powers.marshal_with(hero_powers_model)
+    @hero_powers.expect(hero_powers_input_model)
+    @hero_powers.marshal_with(hero_model)
     def patch(self, id):
         hero_power = HeroPower.query.filter_by(id=id).first()
-        for attr in hero_powers.payload:
-            setattr(hero_power, attr, hero_powers.payload[attr])
-        db.session.add(hero_power)
-        db.session.commit()
-        return hero_power, 201
+        if hero_power:
+            for attr in hero_powers.payload:
+                setattr(hero_power, attr, hero_powers.payload[attr])
+            db.session.add(hero_power)
+            db.session.commit()
+            hero = Hero.query.filter_by(id=Hero.id).first()
+            return hero, 201
+        else:
+            return {"message": "hero power not found."}, 404
+
+
+
 
     def delete(self, id):
         hero_power = HeroPower.query.filter_by(id=id).first()
@@ -254,7 +288,6 @@ class HeroPowersByID(Resource):
                 "error": "Restaurant not found"
             }
             return response_body, 404
-
 
 
 if __name__ == '__main__':
