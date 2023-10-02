@@ -7,7 +7,7 @@
 [![license](https://img.shields.io/badge/license-%20MIT%20-green.svg)](./LICENSE)
 ![Gunicorn version](https://img.shields.io/badge/gunicorn-21.2.0-orange.svg)
 
-![img.png](img.png)<img src='./server/images/api.png'>
+![img.png](img.png)
 
 ## Features
 
