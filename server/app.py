@@ -7,7 +7,7 @@ from flask_migrate import Migrate
 from sqlalchemy import MetaData
 from flask import make_response, request, jsonify
 from flask_restx import Resource, Api, Namespace, fields
-from models import db, HeroPower, Hero, Power, User
+from models import db, HeroPower, Hero, Power
 from sqlalchemy.exc import SQLAlchemyError
 from werkzeug.security import generate_password_hash, check_password_hash
 
