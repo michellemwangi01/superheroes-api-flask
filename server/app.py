@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
+import datetime
+import jwt
 from flask import Flask
 from flask_cors import CORS
 import secrets
 from flask_migrate import Migrate
 from sqlalchemy import MetaData
-from flask_sqlalchemy import SQLAlchemy
 from flask import make_response, request, jsonify
 from flask_restx import Resource, Api, Namespace, fields
-from models import db, HeroPower, Hero, Power
+from models import db, HeroPower, Hero, Power, User
 from sqlalchemy.exc import SQLAlchemyError
-
+from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 secret_key = secrets.token_hex(16)
@@ -90,6 +91,27 @@ class Home(Resource):
             "message": "WELCOME TO THE SUPERHERO GALAXY!."
         }
         return response_message, 200
+
+
+@home.route('/login')
+class Login(Resource):
+    def get(self):
+        auth = request.authorization
+
+        if not auth or not auth.username or not auth.password:
+            return make_response('Could not verify', 401, {'WWW-Authenticate': 'Basic realm="Login required!'})
+
+        user = User.query.filter_by(name=auth.username).first()
+
+        if not user:
+            return make_response('Could not verify', 401, {'WWW-Authenticate': 'Basic realm="Login required!'})
+
+        if check_password_hash(user.password, auth.password):
+            token = jwt.encode(
+                {'public_id': user.public_id, 'exp': datetime.datetime.utcnow() + datetime.timedelta(minutes=30)},
+                app.config['SECRET_KEY'])
+            return jsonify({'token': token.decode('UTF-8')})
+        return make_response('Could not verify', 401, {"WWW-Authenticate": 'Basic realm = "Login required!"'})
 
 
 @heroes.route('/heroes')
@@ -269,9 +291,6 @@ class HeroPowersByID(Resource):
             return hero, 201
         else:
             return {"message": "hero power not found."}, 404
-
-
-
 
     def delete(self, id):
         hero_power = HeroPower.query.filter_by(id=id).first()
